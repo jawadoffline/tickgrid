@@ -40,6 +40,16 @@ demo("throughputProbe", "io.github.tickgrid.demo.ThroughputProbe",
 demo("storeProbe", "io.github.tickgrid.demo.StoreProbe",
      "What a given capacity actually commits, and apply-path allocation.")
 
+/** Renders docs/social-card.png at the 1280x640 GitHub wants for a repository preview. */
+tasks.register<JavaExec>("socialCard") {
+    group = "demo"
+    description = "Renders the repository social preview card."
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass = "io.github.tickgrid.demo.SocialCardLauncher"
+    workingDir = rootProject.projectDir
+    systemProperty("card.out", project.findProperty("out") ?: "docs/social-card.png")
+}
+
 /** The grid on live Binance market data. Public streams only -- no key, no account. */
 tasks.register<JavaExec>("binance") {
     group = "demo"
