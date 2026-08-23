@@ -1,0 +1,22 @@
+# Gradle
+.gradle/
+build/
+consumer-check/.gradle/
+consumer-check/build/
+
+# The pre-Gradle bootstrap: jars fetched by hand into the project, and the spike's own copies.
+# Anchored to specific locations rather than a bare `lib/` or `out/`, which would silently swallow
+# any source directory that ever happens to be called that.
+/lib/
+/out/
+spike-text-render/lib/
+spike-text-render/out/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+Thumbs.db
+.DS_Store

@@ -1,0 +1,18 @@
+[versions]
+javafx = "21.0.5"
+jctools = "4.0.5"
+hdrhistogram = "2.2.2"
+junit = "5.11.3"
+javafxplugin = "0.1.0"
+jmhplugin = "0.7.2"
+jmh = "1.37"
+
+[libraries]
+jctools = { module = "org.jctools:jctools-core", version.ref = "jctools" }
+hdrhistogram = { module = "org.hdrhistogram:HdrHistogram", version.ref = "hdrhistogram" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-launcher = { module = "org.junit.platform:junit-platform-launcher", version = "1.11.3" }
+
+[plugins]
+javafx = { id = "org.openjfx.javafxplugin", version.ref = "javafxplugin" }
+jmh = { id = "me.champeau.jmh", version.ref = "jmhplugin" }

@@ -1,0 +1,158 @@
+Benchmark                                                         (columns)  (keySpread)  (keys)  (rows)   Mode  Cnt          Score          Error   Units
+IngressBenchmark.keyLookup                                                8          N/A    1000     N/A  thrpt    8   42034658.458 ± 11876169.487   ops/s
+IngressBenchmark.keyLookup:·gc.alloc.rate                                 8          N/A    1000     N/A  thrpt    8         ≈ 10⁻³                 MB/sec
+IngressBenchmark.keyLookup:·gc.alloc.rate.norm                            8          N/A    1000     N/A  thrpt    8         ≈ 10⁻⁵                   B/op
+IngressBenchmark.keyLookup:·gc.count                                      8          N/A    1000     N/A  thrpt    8            ≈ 0                 counts
+IngressBenchmark.keyLookup                                                8          N/A   10000     N/A  thrpt    8   41348568.152 ±  3305371.979   ops/s
+IngressBenchmark.keyLookup:·gc.alloc.rate                                 8          N/A   10000     N/A  thrpt    8          0.001 ±        0.001  MB/sec
+IngressBenchmark.keyLookup:·gc.alloc.rate.norm                            8          N/A   10000     N/A  thrpt    8         ≈ 10⁻⁵                   B/op
+IngressBenchmark.keyLookup:·gc.count                                      8          N/A   10000     N/A  thrpt    8            ≈ 0                 counts
+IngressBenchmark.keyLookup                                                8          N/A  100000     N/A  thrpt    8   19379871.510 ±  1109832.954   ops/s
+IngressBenchmark.keyLookup:·gc.alloc.rate                                 8          N/A  100000     N/A  thrpt    8         ≈ 10⁻³                 MB/sec
+IngressBenchmark.keyLookup:·gc.alloc.rate.norm                            8          N/A  100000     N/A  thrpt    8         ≈ 10⁻⁵                   B/op
+IngressBenchmark.keyLookup:·gc.count                                      8          N/A  100000     N/A  thrpt    8            ≈ 0                 counts
+IngressBenchmark.submit                                                   8          N/A    1000     N/A  thrpt    8   19240644.356 ±   946459.653   ops/s
+IngressBenchmark.submit:·gc.alloc.rate                                    8          N/A    1000     N/A  thrpt    8         ≈ 10⁻³                 MB/sec
+IngressBenchmark.submit:·gc.alloc.rate.norm                               8          N/A    1000     N/A  thrpt    8         ≈ 10⁻⁵                   B/op
+IngressBenchmark.submit:·gc.count                                         8          N/A    1000     N/A  thrpt    8            ≈ 0                 counts
+IngressBenchmark.submit                                                   8          N/A   10000     N/A  thrpt    8   18106937.646 ±  3233869.128   ops/s
+IngressBenchmark.submit:·gc.alloc.rate                                    8          N/A   10000     N/A  thrpt    8         ≈ 10⁻³                 MB/sec
+IngressBenchmark.submit:·gc.alloc.rate.norm                               8          N/A   10000     N/A  thrpt    8         ≈ 10⁻⁵                   B/op
+IngressBenchmark.submit:·gc.count                                         8          N/A   10000     N/A  thrpt    8            ≈ 0                 counts
+IngressBenchmark.submit                                                   8          N/A  100000     N/A  thrpt    8   10376086.064 ±   536833.741   ops/s
+IngressBenchmark.submit:·gc.alloc.rate                                    8          N/A  100000     N/A  thrpt    8         ≈ 10⁻³                 MB/sec
+IngressBenchmark.submit:·gc.alloc.rate.norm                               8          N/A  100000     N/A  thrpt    8         ≈ 10⁻⁴                   B/op
+IngressBenchmark.submit:·gc.count                                         8          N/A  100000     N/A  thrpt    8            ≈ 0                 counts
+IngressBenchmark.submitContended                                          8          N/A    1000     N/A  thrpt    8   28509017.302 ±  6609177.572   ops/s
+IngressBenchmark.submitContended:·gc.alloc.rate                           8          N/A    1000     N/A  thrpt    8          0.002 ±        0.002  MB/sec
+IngressBenchmark.submitContended:·gc.alloc.rate.norm                      8          N/A    1000     N/A  thrpt    8         ≈ 10⁻⁴                   B/op
+IngressBenchmark.submitContended:·gc.count                                8          N/A    1000     N/A  thrpt    8            ≈ 0                 counts
+IngressBenchmark.submitContended                                          8          N/A   10000     N/A  thrpt    8   31944327.859 ±  2817244.274   ops/s
+IngressBenchmark.submitContended:·gc.alloc.rate                           8          N/A   10000     N/A  thrpt    8          0.002 ±        0.001  MB/sec
+IngressBenchmark.submitContended:·gc.alloc.rate.norm                      8          N/A   10000     N/A  thrpt    8         ≈ 10⁻⁴                   B/op
+IngressBenchmark.submitContended:·gc.count                                8          N/A   10000     N/A  thrpt    8            ≈ 0                 counts
+IngressBenchmark.submitContended                                          8          N/A  100000     N/A  thrpt    8   17159432.227 ±  5729522.566   ops/s
+IngressBenchmark.submitContended:·gc.alloc.rate                           8          N/A  100000     N/A  thrpt    8          0.002 ±        0.001  MB/sec
+IngressBenchmark.submitContended:·gc.alloc.rate.norm                      8          N/A  100000     N/A  thrpt    8         ≈ 10⁻⁴                   B/op
+IngressBenchmark.submitContended:·gc.count                                8          N/A  100000     N/A  thrpt    8            ≈ 0                 counts
+KeyIndexBenchmark.concurrentHashMap                                     N/A          N/A    1000     N/A  thrpt    8   31123349.034 ±  6707557.657   ops/s
+KeyIndexBenchmark.concurrentHashMap:·gc.alloc.rate                      N/A          N/A    1000     N/A  thrpt    8         ≈ 10⁻³                 MB/sec
+KeyIndexBenchmark.concurrentHashMap:·gc.alloc.rate.norm                 N/A          N/A    1000     N/A  thrpt    8         ≈ 10⁻⁵                   B/op
+KeyIndexBenchmark.concurrentHashMap:·gc.count                           N/A          N/A    1000     N/A  thrpt    8            ≈ 0                 counts
+KeyIndexBenchmark.concurrentHashMap                                     N/A          N/A  100000     N/A  thrpt    8   42941149.015 ±  4722378.581   ops/s
+KeyIndexBenchmark.concurrentHashMap:·gc.alloc.rate                      N/A          N/A  100000     N/A  thrpt    8         ≈ 10⁻³                 MB/sec
+KeyIndexBenchmark.concurrentHashMap:·gc.alloc.rate.norm                 N/A          N/A  100000     N/A  thrpt    8         ≈ 10⁻⁵                   B/op
+KeyIndexBenchmark.concurrentHashMap:·gc.count                           N/A          N/A  100000     N/A  thrpt    8            ≈ 0                 counts
+KeyIndexBenchmark.concurrentHashMapContended                            N/A          N/A    1000     N/A  thrpt    8  151200891.099 ± 18751965.985   ops/s
+KeyIndexBenchmark.concurrentHashMapContended:·gc.alloc.rate             N/A          N/A    1000     N/A  thrpt    8          0.002 ±        0.001  MB/sec
+KeyIndexBenchmark.concurrentHashMapContended:·gc.alloc.rate.norm        N/A          N/A    1000     N/A  thrpt    8         ≈ 10⁻⁵                   B/op
+KeyIndexBenchmark.concurrentHashMapContended:·gc.count                  N/A          N/A    1000     N/A  thrpt    8            ≈ 0                 counts
+KeyIndexBenchmark.concurrentHashMapContended                            N/A          N/A  100000     N/A  thrpt    8  113175997.068 ± 14949848.942   ops/s
+KeyIndexBenchmark.concurrentHashMapContended:·gc.alloc.rate             N/A          N/A  100000     N/A  thrpt    8          0.002 ±        0.001  MB/sec
+KeyIndexBenchmark.concurrentHashMapContended:·gc.alloc.rate.norm        N/A          N/A  100000     N/A  thrpt    8         ≈ 10⁻⁵                   B/op
+KeyIndexBenchmark.concurrentHashMapContended:·gc.count                  N/A          N/A  100000     N/A  thrpt    8            ≈ 0                 counts
+KeyIndexBenchmark.tickgridKeyIndex                                      N/A          N/A    1000     N/A  thrpt    8   37668714.340 ±  9980835.275   ops/s
+KeyIndexBenchmark.tickgridKeyIndex:·gc.alloc.rate                       N/A          N/A    1000     N/A  thrpt    8         ≈ 10⁻³                 MB/sec
+KeyIndexBenchmark.tickgridKeyIndex:·gc.alloc.rate.norm                  N/A          N/A    1000     N/A  thrpt    8         ≈ 10⁻⁵                   B/op
+KeyIndexBenchmark.tickgridKeyIndex:·gc.count                            N/A          N/A    1000     N/A  thrpt    8            ≈ 0                 counts
+KeyIndexBenchmark.tickgridKeyIndex                                      N/A          N/A  100000     N/A  thrpt    8   16119125.983 ±  3530373.771   ops/s
+KeyIndexBenchmark.tickgridKeyIndex:·gc.alloc.rate                       N/A          N/A  100000     N/A  thrpt    8         ≈ 10⁻³                 MB/sec
+KeyIndexBenchmark.tickgridKeyIndex:·gc.alloc.rate.norm                  N/A          N/A  100000     N/A  thrpt    8         ≈ 10⁻⁵                   B/op
+KeyIndexBenchmark.tickgridKeyIndex:·gc.count                            N/A          N/A  100000     N/A  thrpt    8            ≈ 0                 counts
+KeyIndexBenchmark.tickgridKeyIndexContended                             N/A          N/A    1000     N/A  thrpt    8   83415474.180 ± 11350816.534   ops/s
+KeyIndexBenchmark.tickgridKeyIndexContended:·gc.alloc.rate              N/A          N/A    1000     N/A  thrpt    8          0.002 ±        0.001  MB/sec
+KeyIndexBenchmark.tickgridKeyIndexContended:·gc.alloc.rate.norm         N/A          N/A    1000     N/A  thrpt    8         ≈ 10⁻⁵                   B/op
+KeyIndexBenchmark.tickgridKeyIndexContended:·gc.count                   N/A          N/A    1000     N/A  thrpt    8            ≈ 0                 counts
+KeyIndexBenchmark.tickgridKeyIndexContended                             N/A          N/A  100000     N/A  thrpt    8   44732284.327 ±  8463199.023   ops/s
+KeyIndexBenchmark.tickgridKeyIndexContended:·gc.alloc.rate              N/A          N/A  100000     N/A  thrpt    8          0.002 ±        0.001  MB/sec
+KeyIndexBenchmark.tickgridKeyIndexContended:·gc.alloc.rate.norm         N/A          N/A  100000     N/A  thrpt    8         ≈ 10⁻⁴                   B/op
+KeyIndexBenchmark.tickgridKeyIndexContended:·gc.count                   N/A          N/A  100000     N/A  thrpt    8            ≈ 0                 counts
+FormatBenchmark.fixedFormat                                             N/A          N/A     N/A     N/A   avgt    8         26.214 ±        1.066   ns/op
+FormatBenchmark.fixedFormat:·gc.alloc.rate                              N/A          N/A     N/A     N/A   avgt    8       2005.796 ±       78.592  MB/sec
+FormatBenchmark.fixedFormat:·gc.alloc.rate.norm                         N/A          N/A     N/A     N/A   avgt    8         55.125 ±        0.001    B/op
+FormatBenchmark.fixedFormat:·gc.count                                   N/A          N/A     N/A     N/A   avgt    8         90.000                 counts
+FormatBenchmark.fixedFormat:·gc.time                                    N/A          N/A     N/A     N/A   avgt    8         67.000                     ms
+FormatBenchmark.fixedFormatNoString                                     N/A          N/A     N/A     N/A   avgt    8         22.989 ±        9.854   ns/op
+FormatBenchmark.fixedFormatNoString:·gc.alloc.rate                      N/A          N/A     N/A     N/A   avgt    8         ≈ 10⁻³                 MB/sec
+FormatBenchmark.fixedFormatNoString:·gc.alloc.rate.norm                 N/A          N/A     N/A     N/A   avgt    8         ≈ 10⁻⁵                   B/op
+FormatBenchmark.fixedFormatNoString:·gc.count                           N/A          N/A     N/A     N/A   avgt    8            ≈ 0                 counts
+FormatBenchmark.groupedFormat                                           N/A          N/A     N/A     N/A   avgt    8         34.690 ±        2.189   ns/op
+FormatBenchmark.groupedFormat:·gc.alloc.rate                            N/A          N/A     N/A     N/A   avgt    8       1538.224 ±       92.787  MB/sec
+FormatBenchmark.groupedFormat:·gc.alloc.rate.norm                       N/A          N/A     N/A     N/A   avgt    8         55.914 ±        0.001    B/op
+FormatBenchmark.groupedFormat:·gc.count                                 N/A          N/A     N/A     N/A   avgt    8         82.000                 counts
+FormatBenchmark.groupedFormat:·gc.time                                  N/A          N/A     N/A     N/A   avgt    8         63.000                     ms
+FormatBenchmark.parseScaled                                             N/A          N/A     N/A     N/A   avgt    8         25.147 ±        3.308   ns/op
+FormatBenchmark.parseScaled:·gc.alloc.rate                              N/A          N/A     N/A     N/A   avgt    8         ≈ 10⁻³                 MB/sec
+FormatBenchmark.parseScaled:·gc.alloc.rate.norm                         N/A          N/A     N/A     N/A   avgt    8         ≈ 10⁻⁵                   B/op
+FormatBenchmark.parseScaled:·gc.count                                   N/A          N/A     N/A     N/A   avgt    8            ≈ 0                 counts
+FormatBenchmark.parseScaledSlice                                        N/A          N/A     N/A     N/A   avgt    8         24.275 ±        1.097   ns/op
+FormatBenchmark.parseScaledSlice:·gc.alloc.rate                         N/A          N/A     N/A     N/A   avgt    8         ≈ 10⁻³                 MB/sec
+FormatBenchmark.parseScaledSlice:·gc.alloc.rate.norm                    N/A          N/A     N/A     N/A   avgt    8         ≈ 10⁻⁵                   B/op
+FormatBenchmark.parseScaledSlice:·gc.count                              N/A          N/A     N/A     N/A   avgt    8            ≈ 0                 counts
+FormatBenchmark.parseViaDouble                                          N/A          N/A     N/A     N/A   avgt    8         43.754 ±        2.761   ns/op
+FormatBenchmark.parseViaDouble:·gc.alloc.rate                           N/A          N/A     N/A     N/A   avgt    8       1551.307 ±       93.115  MB/sec
+FormatBenchmark.parseViaDouble:·gc.alloc.rate.norm                      N/A          N/A     N/A     N/A   avgt    8         71.125 ±        0.001    B/op
+FormatBenchmark.parseViaDouble:·gc.count                                N/A          N/A     N/A     N/A   avgt    8         84.000                 counts
+FormatBenchmark.parseViaDouble:·gc.time                                 N/A          N/A     N/A     N/A   avgt    8         65.000                     ms
+FormatBenchmark.stringFormat                                            N/A          N/A     N/A     N/A   avgt    8        542.349 ±       21.380   ns/op
+FormatBenchmark.stringFormat:·gc.alloc.rate                             N/A          N/A     N/A     N/A   avgt    8       1263.105 ±       49.401  MB/sec
+FormatBenchmark.stringFormat:·gc.alloc.rate.norm                        N/A          N/A     N/A     N/A   avgt    8        718.219 ±        0.001    B/op
+FormatBenchmark.stringFormat:·gc.count                                  N/A          N/A     N/A     N/A   avgt    8         69.000                 counts
+FormatBenchmark.stringFormat:·gc.time                                   N/A          N/A     N/A     N/A   avgt    8         56.000                     ms
+FormatBenchmark.stringFormatGrouped                                     N/A          N/A     N/A     N/A   avgt    8       1023.349 ±       75.024   ns/op
+FormatBenchmark.stringFormatGrouped:·gc.alloc.rate                      N/A          N/A     N/A     N/A   avgt    8       1567.158 ±      110.995  MB/sec
+FormatBenchmark.stringFormatGrouped:·gc.alloc.rate.norm                 N/A          N/A     N/A     N/A   avgt    8       1679.914 ±        0.001    B/op
+FormatBenchmark.stringFormatGrouped:·gc.count                           N/A          N/A     N/A     N/A   avgt    8         85.000                 counts
+FormatBenchmark.stringFormatGrouped:·gc.time                            N/A          N/A     N/A     N/A   avgt    8         68.000                     ms
+SortBenchmark.arraysSortBaseline                                        N/A         full     N/A    1000   avgt    8         18.707 ±        2.294   us/op
+SortBenchmark.arraysSortBaseline:·gc.alloc.rate                         N/A         full     N/A    1000   avgt    8         ≈ 10⁻³                 MB/sec
+SortBenchmark.arraysSortBaseline:·gc.alloc.rate.norm                    N/A         full     N/A    1000   avgt    8          0.008 ±        0.001    B/op
+SortBenchmark.arraysSortBaseline:·gc.count                              N/A         full     N/A    1000   avgt    8            ≈ 0                 counts
+SortBenchmark.arraysSortBaseline                                        N/A         full     N/A   50000   avgt    8       2850.376 ±       89.755   us/op
+SortBenchmark.arraysSortBaseline:·gc.alloc.rate                         N/A         full     N/A   50000   avgt    8         ≈ 10⁻³                 MB/sec
+SortBenchmark.arraysSortBaseline:·gc.alloc.rate.norm                    N/A         full     N/A   50000   avgt    8          1.164 ±        0.044    B/op
+SortBenchmark.arraysSortBaseline:·gc.count                              N/A         full     N/A   50000   avgt    8            ≈ 0                 counts
+SortBenchmark.arraysSortBaseline                                        N/A          few     N/A    1000   avgt    8          8.687 ±        0.396   us/op
+SortBenchmark.arraysSortBaseline:·gc.alloc.rate                         N/A          few     N/A    1000   avgt    8         ≈ 10⁻³                 MB/sec
+SortBenchmark.arraysSortBaseline:·gc.alloc.rate.norm                    N/A          few     N/A    1000   avgt    8          0.004 ±        0.001    B/op
+SortBenchmark.arraysSortBaseline:·gc.count                              N/A          few     N/A    1000   avgt    8            ≈ 0                 counts
+SortBenchmark.arraysSortBaseline                                        N/A          few     N/A   50000   avgt    8        873.715 ±       57.792   us/op
+SortBenchmark.arraysSortBaseline:·gc.alloc.rate                         N/A          few     N/A   50000   avgt    8         ≈ 10⁻³                 MB/sec
+SortBenchmark.arraysSortBaseline:·gc.alloc.rate.norm                    N/A          few     N/A   50000   avgt    8          0.396 ±        0.120    B/op
+SortBenchmark.arraysSortBaseline:·gc.count                              N/A          few     N/A   50000   avgt    8            ≈ 0                 counts
+SortBenchmark.boxedComparatorSort                                       N/A         full     N/A    1000   avgt    8        168.129 ±        4.775   us/op
+SortBenchmark.boxedComparatorSort:·gc.alloc.rate                        N/A         full     N/A    1000   avgt    8         97.217 ±        2.724  MB/sec
+SortBenchmark.boxedComparatorSort:·gc.alloc.rate.norm                   N/A         full     N/A    1000   avgt    8      17200.068 ±        0.002    B/op
+SortBenchmark.boxedComparatorSort:·gc.count                             N/A         full     N/A    1000   avgt    8          4.000                 counts
+SortBenchmark.boxedComparatorSort:·gc.time                              N/A         full     N/A    1000   avgt    8          4.000                     ms
+SortBenchmark.boxedComparatorSort                                       N/A         full     N/A   50000   avgt    8      15756.770 ±     3442.684   us/op
+SortBenchmark.boxedComparatorSort:·gc.alloc.rate                        N/A         full     N/A   50000   avgt    8         62.570 ±       12.407  MB/sec
+SortBenchmark.boxedComparatorSort:·gc.alloc.rate.norm                   N/A         full     N/A   50000   avgt    8    1028438.379 ±        1.390    B/op
+SortBenchmark.boxedComparatorSort:·gc.count                             N/A         full     N/A   50000   avgt    8          4.000                 counts
+SortBenchmark.boxedComparatorSort:·gc.time                              N/A         full     N/A   50000   avgt    8          9.000                     ms
+SortBenchmark.boxedComparatorSort                                       N/A          few     N/A    1000   avgt    8        151.768 ±       15.874   us/op
+SortBenchmark.boxedComparatorSort:·gc.alloc.rate                        N/A          few     N/A    1000   avgt    8        107.866 ±       10.378  MB/sec
+SortBenchmark.boxedComparatorSort:·gc.alloc.rate.norm                   N/A          few     N/A    1000   avgt    8      17200.062 ±        0.007    B/op
+SortBenchmark.boxedComparatorSort:·gc.count                             N/A          few     N/A    1000   avgt    8          6.000                 counts
+SortBenchmark.boxedComparatorSort:·gc.time                              N/A          few     N/A    1000   avgt    8          6.000                     ms
+SortBenchmark.boxedComparatorSort                                       N/A          few     N/A   50000   avgt    8       8407.624 ±      261.684   us/op
+SortBenchmark.boxedComparatorSort:·gc.alloc.rate                        N/A          few     N/A   50000   avgt    8        115.751 ±        3.591  MB/sec
+SortBenchmark.boxedComparatorSort:·gc.alloc.rate.norm                   N/A          few     N/A   50000   avgt    8    1028437.274 ±        6.548    B/op
+SortBenchmark.boxedComparatorSort:·gc.count                             N/A          few     N/A   50000   avgt    8          6.000                 counts
+SortBenchmark.boxedComparatorSort:·gc.time                              N/A          few     N/A   50000   avgt    8         12.000                     ms
+SortBenchmark.primitiveMergeSort                                        N/A         full     N/A    1000   avgt    8         48.582 ±        0.994   us/op
+SortBenchmark.primitiveMergeSort:·gc.alloc.rate                         N/A         full     N/A    1000   avgt    8         ≈ 10⁻³                 MB/sec
+SortBenchmark.primitiveMergeSort:·gc.alloc.rate.norm                    N/A         full     N/A    1000   avgt    8          0.021 ±        0.004    B/op
+SortBenchmark.primitiveMergeSort:·gc.count                              N/A         full     N/A    1000   avgt    8            ≈ 0                 counts
+SortBenchmark.primitiveMergeSort                                        N/A         full     N/A   50000   avgt    8       4406.846 ±      197.888   us/op
+SortBenchmark.primitiveMergeSort:·gc.alloc.rate                         N/A         full     N/A   50000   avgt    8         ≈ 10⁻³                 MB/sec
+SortBenchmark.primitiveMergeSort:·gc.alloc.rate.norm                    N/A         full     N/A   50000   avgt    8          1.795 ±        0.080    B/op
+SortBenchmark.primitiveMergeSort:·gc.count                              N/A         full     N/A   50000   avgt    8            ≈ 0                 counts
+SortBenchmark.primitiveMergeSort                                        N/A          few     N/A    1000   avgt    8         38.535 ±        1.271   us/op
+SortBenchmark.primitiveMergeSort:·gc.alloc.rate                         N/A          few     N/A    1000   avgt    8         ≈ 10⁻³                 MB/sec
+SortBenchmark.primitiveMergeSort:·gc.alloc.rate.norm                    N/A          few     N/A    1000   avgt    8          0.017 ±        0.004    B/op
+SortBenchmark.primitiveMergeSort:·gc.count                              N/A          few     N/A    1000   avgt    8            ≈ 0                 counts
+SortBenchmark.primitiveMergeSort                                        N/A          few     N/A   50000   avgt    8       3106.977 ±      302.760   us/op
+SortBenchmark.primitiveMergeSort:·gc.alloc.rate                         N/A          few     N/A   50000   avgt    8         ≈ 10⁻³                 MB/sec
+SortBenchmark.primitiveMergeSort:·gc.alloc.rate.norm                    N/A          few     N/A   50000   avgt    8          1.267 ±        0.125    B/op
+SortBenchmark.primitiveMergeSort:·gc.count                              N/A          few     N/A   50000   avgt    8            ≈ 0                 counts

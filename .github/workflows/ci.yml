@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # The test suite drives JavaFX for the glyph-metrics tests, which need a display even though
+      # nothing is shown. Monocle's headless platform provides one; without this, CI on Linux fails
+      # in GlyphWidths rather than anywhere interesting.
+      - name: Start a virtual display (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+          echo "GRADLE_OPTS=-Dorg.gradle.jvmargs=-Xmx2g" >> $GITHUB_ENV
+
+      - name: Build and test
+        run: ${{ runner.os == 'Linux' && 'xvfb-run --auto-servernum ./gradlew build --no-daemon' || './gradlew build --no-daemon' }}
+        shell: bash
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-${{ matrix.os }}
+          path: '**/build/reports/tests/**'
+
+  # The claim that TickGrid can be jlinked into a consumer's runtime image is exactly the kind of
+  # packaging promise that rots silently. This proves it on every PR rather than asserting it in a
+  # README, and it is the reason the one runtime dependency had to be a real named module.
+  jlink:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Verify the module links into a runtime image
+        run: ./gradlew :tickgrid-core:verifyJlink --no-daemon
+
+  # Resolves the published coordinate from a repository, the way a stranger would, and compiles
+  # against every exported package. A POM that works by project reference and fails by coordinate
+  # is the classic first-release bug, and inspection does not catch it.
+  consumer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Publish to the local repository
+        run: ./gradlew :tickgrid-core:publishToMavenLocal --no-daemon
+      - name: Build and run a consumer against the coordinate
+        run: ./gradlew -p consumer-check run --no-daemon
+
+  bench-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Install a virtual display
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+      # A short run at one rate: enough to catch a harness that no longer starts, not so long that
+      # every PR waits on it. The published numbers come from a real machine, never from CI --
+      # a shared runner's frame times mean nothing.
+      - name: Bench smoke run
+        run: |
+          xvfb-run --auto-servernum ./gradlew :tickgrid-bench:bench --no-daemon \
+            -Pimpls="tickgrid" -Prows=1000 -Prates=50000 -Pseconds=3 -Pwarmup=2

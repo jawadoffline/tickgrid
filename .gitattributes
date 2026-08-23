@@ -1,0 +1,20 @@
+# Normalise text in the repository; check out with the platform's own endings.
+* text=auto
+
+# gradlew is executed by /bin/sh on Linux and macOS CI. If it is ever checked out with CRLF the
+# shebang line ends in \r and the interpreter is reported as not found — an error that names the
+# file rather than the line endings, and costs an afternoon the first time.
+gradlew text eol=lf
+*.sh    text eol=lf
+
+# The Windows launcher needs the opposite.
+gradlew.bat text eol=crlf
+*.cmd       text eol=crlf
+
+# Never touch these.
+*.jar binary
+*.png binary
+*.pdf binary
+
+# Keeps `git diff` on the JMH output readable rather than one enormous line.
+docs/jmh-results.txt text eol=lf
