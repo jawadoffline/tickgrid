@@ -41,6 +41,22 @@ java {
     withJavadocJar()
 }
 
+tasks.javadoc {
+    title = "TickGrid $version API"
+    (options as StandardJavadocDocletOptions).apply {
+        windowTitle = "TickGrid API"
+        // Makes Region, Canvas, Color and the JDK types clickable rather than bare names. Fetched
+        // at build time; if either host is unreachable javadoc warns and carries on unlinked, which
+        // is why this is not allowed to fail the build.
+        links(
+            "https://docs.oracle.com/en/java/javase/21/docs/api/",
+            "https://openjfx.io/javadoc/21/"
+        )
+        bottom("Apache License 2.0. Measurements and their caveats in BENCHMARKS.md.")
+    }
+    isFailOnError = false
+}
+
 publishing {
     publications {
         create<MavenPublication>("mavenJava") {

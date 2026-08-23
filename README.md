@@ -4,6 +4,8 @@ A canvas-rendered, virtualized data grid for JavaFX, built for real-time market 
 
 ![The blotter demo](docs/blotter.png)
 
+**[API documentation](https://jawadoffline.github.io/tickgrid/)** · [benchmarks](BENCHMARKS.md)
+
 Canvas text throughput proved first, then the columnar store, thread-agnostic conflated ingestion,
 sort and filter with an atomically swapped snapshot, the renderer, a frame-time harness that
 measures all of it against `TableView`, JMH microbenchmarks, a Gradle build that publishes it, and

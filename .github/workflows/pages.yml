@@ -1,0 +1,49 @@
+name: Javadoc
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Pages deployment needs these; id-token is what lets deploy-pages prove where the artifact
+# came from. Everything else stays read-only.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deployments race, but let a run in flight finish rather than cancelling it
+# half-published.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # Only tickgrid-core is published, so only tickgrid-core has an API worth documenting.
+      # The demo and bench modules are applications, not libraries.
+      - name: Build javadoc
+        run: ./gradlew :tickgrid-core:javadoc --no-daemon
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: tickgrid-core/build/docs/javadoc
+
+      - id: deploy
+        uses: actions/deploy-pages@v4
