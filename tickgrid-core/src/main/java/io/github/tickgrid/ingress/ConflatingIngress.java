@@ -77,6 +77,10 @@ public final class ConflatingIngress<T, K> {
         /**
          * Allows torn rows. Retained only for {@code HandshakeDemo} — never select it in
          * production.
+         *
+         * <p>Payload writes are still release-published, so this removes tear protection and
+         * nothing else. Leaving them unordered as well made the mode fail on arm64 for a second,
+         * unrelated reason, which defeated the point of having a mode that isolates one bug.
          */
         NONE
     }
@@ -196,6 +200,13 @@ public final class ConflatingIngress<T, K> {
             seq.set(slot, v + 2);                       // even: release-publishes the payload
         } else {
             extractor.extract(row, staging, base);
+            // No seqlock, but still a release. Without one the payload is published by nothing at
+            // all: a producer whose dirty CAS fails does not enqueue, and a failed compareAndSet
+            // carries only volatile-read semantics, so these plain stores never reach the drain.
+            // On x86 that is hidden by the hardware; on arm64 it strands rows outright. NONE is
+            // meant to remove tear protection, not memory ordering -- there is no odd/even bracket
+            // and no reader retry here, so rows still tear, which is the whole point of it.
+            seq.setRelease(slot, seq.getPlain(slot) + 1);
         }
 
         // Only now is the row coherent, so only now may it become visible to the drain.
@@ -344,6 +355,8 @@ public final class ConflatingIngress<T, K> {
         final int base = slot * columnCount;
 
         if (tearProtection != TearProtection.SEQLOCK) {
+            seq.getAcquire(slot);                       // pairs with the release in submit
+            VarHandle.loadLoadFence();
             System.arraycopy(staging, base, scratch, 0, columnCount);
             return;
         }
