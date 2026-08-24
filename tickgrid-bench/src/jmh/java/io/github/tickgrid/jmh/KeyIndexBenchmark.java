@@ -19,7 +19,12 @@ import java.util.concurrent.TimeUnit;
  * store can subscript with, a hard capacity bound, and a table that never rehashes — plus the
  * throughput measured here, which favours it at low key counts and ties at high ones.
  *
- * <p>All three variants run in one invocation of this class <b>on purpose</b>. An earlier attempt
+ * <p>{@code CasKeyIndex} is the fourth variant: this class as it stood before retirement existed,
+ * inserting by bucket CAS with no tombstones to probe past. It is here to answer whether making
+ * removal possible cost anything on the path that matters — lookups of keys that already have
+ * slots, which is what every one of these benchmarks measures once setup has run.
+ *
+ * <p>All four variants run in one invocation of this class <b>on purpose</b>. An earlier attempt
  * compared them across separate JMH runs and reached the opposite conclusion, because run-to-run
  * variance on this machine is larger than the effect: {@code ConcurrentHashMap} scored 31.1M and
  * then 77.8M ops/sec at a thousand keys, from identical code.
@@ -35,6 +40,7 @@ public class KeyIndexBenchmark {
     public int keys;
 
     private KeyIndex<String> index;
+    private CasKeyIndex<String> casInsert;
     private EntryKeyIndex<String> entryLayout;
     private ConcurrentHashMap<String, Integer> chm;
     private String[] symbols;
@@ -43,11 +49,13 @@ public class KeyIndexBenchmark {
     public void setUp() {
         symbols = new String[keys];
         index = new KeyIndex<>(keys);
+        casInsert = new CasKeyIndex<>(keys);
         entryLayout = new EntryKeyIndex<>(keys);
         chm = new ConcurrentHashMap<>(keys * 2);
         for (int i = 0; i < keys; i++) {
             symbols[i] = "SYM" + i;
             index.getOrCreate(symbols[i]);
+            casInsert.getOrCreate(symbols[i]);
             entryLayout.getOrCreate(symbols[i]);
             chm.put(symbols[i], i);
         }
@@ -61,6 +69,22 @@ public class KeyIndexBenchmark {
     @Benchmark
     public int tickgridKeyIndex(Cursor cursor) {
         return index.getOrCreate(symbols[(int) (cursor.at++ % keys)]);
+    }
+
+    /**
+     * The pre-retirement version. The difference against {@code tickgridKeyIndex} is the price of
+     * being able to remove a key at all: one identity comparison per probe to step over tombstones,
+     * against a saved spin-loop check on the slot read.
+     */
+    @Benchmark
+    public int casInsertKeyIndex(Cursor cursor) {
+        return casInsert.getOrCreate(symbols[(int) (cursor.at++ % keys)]);
+    }
+
+    @Benchmark
+    @Threads(4)
+    public void casInsertKeyIndexContended(Cursor cursor, Blackhole bh) {
+        bh.consume(casInsert.getOrCreate(symbols[(int) (cursor.at++ % keys)]));
     }
 
     /**

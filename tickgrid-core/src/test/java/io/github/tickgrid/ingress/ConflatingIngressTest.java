@@ -415,4 +415,172 @@ class ConflatingIngressTest {
     static final class Flag {
         volatile boolean value;
     }
+
+    // ------------------------------------------------------------- retirement
+
+    private static ColumnStore store(int capacity) {
+        return new ColumnStore(capacity, COLUMNS);
+    }
+
+    @Test
+    void retiringAKeyRemovesItsRowOnTheNextDrain() {
+        ConflatingIngress<Tick, String> in = ingress(16);
+        ColumnStore store = store(16);
+
+        in.submit(tick("AAPL", 5));
+        in.submit(tick("MSFT", 7));
+        in.drainAll(store.applier());
+        assertEquals(2, store.rowCount());
+
+        assertTrue(in.retire("AAPL"));
+        assertEquals(2, store.rowCount(), "the removal must wait for the drain, like everything else");
+
+        in.drainAll(store.applier());
+        assertEquals(1, store.rowCount());
+        assertFalse(store.isLive(0));
+        assertTrue(store.isLive(1));
+        assertEquals(1, in.removedCount());
+    }
+
+    @Test
+    void retiringAnUnknownKeyIsANoOp() {
+        ConflatingIngress<Tick, String> in = ingress(16);
+        assertFalse(in.retire("NOPE"));
+        assertEquals(0, in.retiredCount());
+    }
+
+    /**
+     * The ordering hazard retirement exists to avoid. A row staged before the retirement is still
+     * sitting in the queue when the retirement is enqueued; if the removal jumped the queue, the
+     * drain would apply that row afterwards and bring a deleted instrument back to life.
+     */
+    @Test
+    void aStagedUpdateCannotResurrectARetiredRow() {
+        ConflatingIngress<Tick, String> in = ingress(16);
+        ColumnStore store = store(16);
+
+        in.submit(tick("AAPL", 1));
+        in.drainAll(store.applier());
+        assertTrue(store.isLive(0));
+
+        in.submit(tick("AAPL", 2));                     // queued, not yet drained
+        in.retire("AAPL");                              // queued behind it
+        in.drainAll(store.applier());
+
+        assertFalse(store.isLive(0), "the update must be applied first and the removal last");
+        assertEquals(0, store.rowCount());
+    }
+
+    @Test
+    void aSlotIsNotReissuedUntilASnapshotExcludesIt() {
+        ConflatingIngress<Tick, String> in = ingress(16);
+        ColumnStore store = store(16);
+
+        in.submit(tick("AAPL", 1));
+        in.drainAll(store.applier());
+        final int epochBefore = store.epoch();
+
+        in.retire("AAPL");
+        in.drainAll(store.applier());
+        assertEquals(1, in.awaitingReclaim());
+
+        // A frame still rendering a snapshot taken before the removal proves nothing.
+        assertEquals(0, in.reclaim(epochBefore));
+        assertEquals(1, in.awaitingReclaim());
+
+        // One dated at or after it does.
+        assertEquals(1, in.reclaim(store.epoch()));
+        assertEquals(0, in.awaitingReclaim());
+        assertEquals(1, in.reclaimedCount());
+
+        in.submit(tick("TSLA", 9));
+        in.drainAll(store.applier());
+        assertTrue(store.isLive(0), "the freed slot should be the one reissued");
+        assertEquals(1, store.rowCount());
+    }
+
+    /**
+     * End to end, and the reason any of this exists: an instrument universe that turns over many
+     * times its own size, against a store that could never hold all of it at once. Before slot
+     * reclamation this wedged permanently on the 65th distinct key.
+     */
+    @Test
+    void aTurningOverUniverseRunsPastCapacity() {
+        final int capacity = 64;
+        ConflatingIngress<Tick, String> in = ingress(capacity);
+        ColumnStore store = store(capacity);
+
+        for (int round = 0; round < 100; round++) {
+            for (int i = 0; i < capacity; i++) {
+                assertTrue(in.submit(tick("R" + round + "S" + i, round * 1000L + i)),
+                        "rejected at round " + round + ", key " + i);
+            }
+            in.drainAll(store.applier());
+            assertEquals(capacity, store.rowCount());
+
+            for (int i = 0; i < capacity; i++) in.retire("R" + round + "S" + i);
+            in.drainAll(store.applier());
+            assertEquals(0, store.rowCount());
+
+            in.reclaim(store.epoch());                  // what the frame loop does
+        }
+
+        assertEquals(6400, in.retiredCount());
+        assertEquals(6400, in.reclaimedCount());
+        assertEquals(0, in.rejectedCount(), "6,400 instruments through 64 slots");
+        assertEquals(capacity, in.keyIndex().slotsIssued(), "and never a 65th slot");
+    }
+
+    @Test
+    void aReissuedSlotDoesNotInheritTheOldRowsValues() {
+        ConflatingIngress<Tick, String> in = ingress(4);
+        ColumnStore store = store(4);
+
+        in.submit(tick("AAPL", 500));
+        in.drainAll(store.applier());
+        assertEquals(500, store.get(0, 0));
+
+        in.retire("AAPL");
+        in.drainAll(store.applier());
+        in.reclaim(store.epoch());
+
+        // The new tenant writes every column, so this is really about what happens in between:
+        // between the removal and the next apply the slot must read as empty, not as AAPL.
+        assertEquals(0, store.get(0, 0), "a parked slot must not still hold the old prices");
+
+        in.submit(tick("TSLA", 900));
+        in.drainAll(store.applier());
+        assertEquals(900, store.get(0, 0));
+    }
+
+    @Test
+    void retirementClearsTheDirtyFlagSoTheSlotIsUsableAgain() {
+        // A slot retired while dirty would otherwise stay flagged forever, and the next key to be
+        // given that slot would never enqueue -- its updates would stage and never be drained.
+        ConflatingIngress<Tick, String> in = ingress(4);
+        ColumnStore store = store(4);
+
+        in.submit(tick("AAPL", 1));
+        in.drainAll(store.applier());
+        in.submit(tick("AAPL", 2));                     // leaves the slot dirty and queued
+        in.retire("AAPL");
+        in.drainAll(store.applier());
+        in.reclaim(store.epoch());
+
+        in.submit(tick("TSLA", 42));
+        assertEquals(1, in.drainAll(store.applier()), "the reissued slot must still enqueue");
+        assertEquals(42, store.get(0, 0));
+    }
+
+    @Test
+    void anApplierThatCannotRemoveSaysSoRatherThanLosingTheSlot() {
+        ConflatingIngress<Tick, String> in = ingress(4);
+        RowApplier applyOnly = (slot, values, count) -> { };
+
+        in.submit(tick("AAPL", 1));
+        in.drainAll(applyOnly);
+        in.retire("AAPL");
+
+        assertThrows(UnsupportedOperationException.class, () -> in.drainAll(applyOnly));
+    }
 }

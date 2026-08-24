@@ -30,10 +30,16 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
  * {@link #snapshotColumn}, which copies the key column into a caller-owned array first.
  *
  * <h2>Removal</h2>
- * {@link #remove} tombstones a slot and never recycles it. Recycling would let a published view
- * snapshot point at a slot that now belongs to a different instrument, and the renderer would paint
- * one symbol's prices on another symbol's line. {@link #epoch()} bumps on every removal so a future
- * implementation can retire snapshots and reuse slots safely.
+ * {@link #remove} tombstones a slot and wipes its columns. The store itself never decides to reuse
+ * a slot: doing that too early would let a published view snapshot point at a slot that now belongs
+ * to a different instrument, and the renderer would paint one symbol's prices on another symbol's
+ * line.
+ *
+ * <p>{@link #epoch()} bumps on every removal, and that is what makes reuse decidable. A view
+ * snapshot records the epoch it was built at, so a slot removed at epoch {@code E} is provably
+ * absent from every snapshot dated {@code E} or later. {@code ConflatingIngress} holds retired
+ * slots until that test passes and only then hands them back out — see
+ * {@code ConflatingIngress#retire} and {@code ConflatingIngress#reclaim}.
  */
 public final class ColumnStore {
 
@@ -88,8 +94,18 @@ public final class ColumnStore {
 
     /** A {@link RowApplier} that writes straight into this store. Bind it to the drain. */
     public RowApplier applier() {
-        return this::apply;
+        return applier;
     }
+
+    private final RowApplier applier = new RowApplier() {
+        @Override public void apply(int slot, long[] values, int count) {
+            ColumnStore.this.apply(slot, values, count);
+        }
+        @Override public int remove(int slot) {
+            ColumnStore.this.remove(slot);
+            return epoch;
+        }
+    };
 
     /**
      * Writes one row. Drain thread only.
@@ -115,12 +131,20 @@ public final class ColumnStore {
         }
     }
 
-    /** Tombstones a slot. The slot is never reused; see the class note on snapshot safety. */
+    /**
+     * Tombstones a slot and wipes it, so whatever moves in next starts from zero rather than
+     * inheriting the previous tenant's prices and flash stamps.
+     *
+     * <p>Wiping here rather than on reuse is safe because the renderer skips dead rows on
+     * {@link #isLive} without reading their values, and it keeps the cost off the path that hands
+     * a slot to a new key. See the class note on removal for when the slot may be reused.
+     */
     public void remove(int slot) {
         if (live[slot]) {
             live[slot] = false;
             rowCount--;
             epoch++;
+            for (Column c : columns) c.clear(slot);
         }
     }
 
@@ -263,6 +287,15 @@ public final class ColumnStore {
 
         abstract long allocatedBytes();
 
+        /** Zeroes the value and drops the flash stamp. Untouched chunks stay unallocated. */
+        abstract void clear(int slot);
+
+        final void clearStamp(int slot) {
+            if (stamps == null) return;
+            final int[] chunk = stamps.get(slot >>> CHUNK_SHIFT);
+            if (chunk != null) chunk[slot & CHUNK_MASK] = 0;
+        }
+
         final void stamp(int slot, int packed) {
             if (stamps == null) return;
             stampChunk(slot >>> CHUNK_SHIFT)[slot & CHUNK_MASK] = packed;
@@ -316,6 +349,12 @@ public final class ColumnStore {
             return value > old ? DIR_UP : DIR_DOWN;
         }
 
+        @Override void clear(int slot) {
+            final long[] block = chunks.get(slot >>> CHUNK_SHIFT);
+            if (block != null) block[slot & CHUNK_MASK] = 0L;
+            clearStamp(slot);
+        }
+
         @Override long get(int slot) {
             final long[] block = chunks.get(slot >>> CHUNK_SHIFT);
             return block == null ? 0L : block[slot & CHUNK_MASK];
@@ -360,6 +399,12 @@ public final class ColumnStore {
             if (old == v) return 0;
             block[i] = v;
             return v > old ? DIR_UP : DIR_DOWN;
+        }
+
+        @Override void clear(int slot) {
+            final int[] block = chunks.get(slot >>> CHUNK_SHIFT);
+            if (block != null) block[slot & CHUNK_MASK] = 0;
+            clearStamp(slot);
         }
 
         @Override long get(int slot) {

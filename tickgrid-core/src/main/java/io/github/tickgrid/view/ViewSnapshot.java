@@ -12,11 +12,15 @@ import io.github.tickgrid.store.ColumnStore;
  *
  * <h2>Why a slot reference stays valid</h2>
  * A snapshot holds slot indices, not rows, so it is only safe while a slot means the same row it
- * meant when the snapshot was built. Two properties guarantee that today: {@code KeyIndex} never
- * releases a slot, and {@link ColumnStore#remove} tombstones rather than recycles. If slot reuse is
- * ever added, this stops being free — which is what {@link #storeEpoch()} is for. Compare it
- * against {@link ColumnStore#epoch()} to know whether any row has been removed since the snapshot
- * was taken, and refuse to reuse a slot until no live snapshot predates its removal.
+ * meant when the snapshot was built. Slots <i>are</i> reused once an instrument is retired, so that
+ * is not free, and {@link #storeEpoch()} is what pays for it.
+ *
+ * <p>The store's epoch advances on every removal, and a snapshot records the epoch it was built at.
+ * A slot removed at epoch {@code E} therefore cannot appear in any snapshot dated {@code E} or
+ * later. So publishing such a snapshot proves the slot is off screen, and only then may it be
+ * handed to another instrument — which is exactly the test
+ * {@code ConflatingIngress#reclaim(int)} applies, driven once a frame by the render thread, the
+ * one place where the age of every live snapshot is known.
  *
  * <p>Removal between recomputes is handled without any of that: a tombstoned slot is still listed
  * here, so the renderer checks {@link ColumnStore#isLive} — one boolean array read per visible row

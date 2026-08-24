@@ -24,6 +24,11 @@ import java.util.List;
  * of its own is what makes a frame coherent: every row applied this frame is drawn this frame, and
  * a burst that exceeds the budget defers rather than stretching the frame.
  *
+ * <h2>Slot reclamation</h2>
+ * Retired slots are handed back to the ingress here, once per frame, dated against the snapshot
+ * about to be drawn. This is the only place in the library that can make that call safely: it is
+ * the thread that holds snapshots, and it holds them for exactly one frame.
+ *
  * <h2>Not repainting</h2>
  * A frame is dirty if data was applied, the view was reordered, the viewport moved or resized, the
  * pointer moved, or any visible cell is still inside its flash window. When none of those hold, the
@@ -127,6 +132,20 @@ public final class TickGridView extends Region {
         }
 
         final ViewSnapshot view = viewModel.snapshot();
+
+        // Reclaim against the snapshot this frame will draw, and only after reading it. Every
+        // older snapshot is unreachable by now, so any slot this one already excludes is off
+        // screen and safe to reissue. Doing it before the read would race the swap.
+        ingress.reclaim(view.storeEpoch());
+
+        // Selection is held as a slot, which stops meaning the same row once that slot is retired.
+        // A retired slot stays dead for at least one recompute before it can be reissued, so
+        // checking liveness each frame always catches it while it is still nobody's row.
+        if (selectedSlot >= 0 && !store.isLive(selectedSlot)) {
+            selectedSlot = -1;
+            overlayDirty = true;
+        }
+
         if (view.generation() != lastGeneration || view.count() != viewport.rowCount()) {
             lastGeneration = view.generation();
             viewport.setRowCount(view.count());

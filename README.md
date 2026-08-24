@@ -59,7 +59,7 @@ machine they build on.
 | `ingress/ConflatingIngress` | Staging arena, per-slot seqlocks, dirty flags, MPSC queue, budgeted drain. |
 | `ingress/RowExtractor` | How a producer's row becomes columns. Runs inside the seqlock window. |
 | `store/Schema` · `ColumnSpec` · `ColumnKind` | Typed column declarations, and the memory they imply. |
-| `store/ColumnStore` | Chunked columns at the declared width, change tracking, tombstoned removal. |
+| `store/ColumnStore` | Chunked columns at the declared width, change tracking, removal. |
 | `store/StringDictionary` | Lock-free interning of repeated strings to 4-byte ordinals. |
 | `demo/HandshakeDemo` | Runs the broken variants side by side and counts the damage. |
 | `demo/ThroughputProbe` | Smoke measurement of rate, allocation and conflation. Not JMH. |
@@ -83,7 +83,7 @@ machine they build on.
 | `bench/TableViewTarget` | The baseline, in naive and batched flavours. |
 | `bench/SyntheticFeed` · `FrameStats` | Rate-limited feed, HdrHistogram recording. |
 | `src/jmh/.../IngressBenchmark` | §6's table: submit throughput and allocation by key count. |
-| `src/jmh/.../KeyIndexBenchmark` | The hand-rolled map against `ConcurrentHashMap`. |
+| `src/jmh/.../KeyIndexBenchmark` | The hand-rolled map against `ConcurrentHashMap`, and against itself before removal existed. |
 | `src/jmh/.../FormatBenchmark` | Formatting and parsing, both directions. |
 | `src/jmh/.../SortBenchmark` | Primitive merge sort against a boxed comparator. |
 
@@ -439,10 +439,50 @@ CI runs on Linux, Windows and macOS, and covers four things beyond the tests: th
 external consumer resolving the published coordinate, a bench smoke run, and the test suite under
 `xvfb` — the glyph-metrics tests need a display even though nothing is shown.
 
+## Retirement and slot reuse
+
+An instrument universe turns over: options expire, listings end, a session rolls. `ConflatingIngress`
+handles that with `retire(key)`, and the interesting part is what it deliberately does *not* do
+immediately.
+
+The removal travels through the same queue as updates, so it lands behind every update already
+staged for that key. Applying it out of band instead would let the drain write a staged row after
+the removal and bring a deleted instrument back.
+
+Reissuing the slot waits longer still, because a published `ViewSnapshot` holds slot indices rather
+than rows. Hand a slot to a new instrument while a snapshot listing it is still on screen and the
+renderer paints one symbol's prices on another symbol's line. So a retired slot is parked with the
+store epoch that excludes it, and `reclaim(epoch)` frees only those slots the snapshot now being
+drawn already leaves out. `TickGridView` makes that call once a frame, immediately after reading the
+snapshot it is about to render — the one point in the library where the age of every live snapshot
+is known.
+
+One consequence is worth stating before it bites: **capacity must allow for the delay.** A retired
+slot is unavailable until a recompute has published and a frame has drawn, so capacity has to cover
+the peak live key count plus the retirements in flight across that window. Sized exactly to a
+rotating universe instead, the blotter demo rejected 251,554 submits in fifteen seconds; sixty-four
+slots of headroom took that to zero. Watch it yourself with:
+
+```
+./gradlew :tickgrid-demo:run -Protate=250
+```
+
+`KeyIndex` tombstones the retired bucket instead of clearing it, so probe chains running through it
+stay intact, and later insertions claim tombstones in preference to fresh buckets. Insertion moved
+under a lock to make this sound: with removal in play, a thread claiming a tombstone early in a
+probe path can race one claiming a null bucket later in the same path, and the same key ends up
+with two slots. Lookups are untouched and stay lock-free — see BENCHMARKS.md for the measurement
+that says so.
+
 ## Status
 
-Every step of the design's build order is now done. Slot reuse after removal is deliberately
-absent — snapshots carry `storeEpoch` so it can be added safely later — and the deferred list from
-§5 (column pinning, resize and reorder, grouping, clipboard, CSV, editing, light theme) is still
-deferred. Accessibility remains unsolved and is stated plainly above rather than left to be
-discovered.
+Every step of the design's build order is done, and slot reuse after removal — left out of the
+first cut, with `storeEpoch` carried on snapshots so it could be added safely — is now in. The
+deferred list from §5 (column pinning, resize and reorder, grouping, clipboard, CSV, editing, light
+theme) is still deferred. Accessibility remains unsolved and is stated plainly above rather than
+left to be discovered.
+
+Two bounds are worth knowing. Tombstones are reclaimed by insertions that probe past them, which
+keeps them bounded in practice rather than by construction; `KeyIndex.tombstoneCount()` is exposed
+so a long-lived process can watch it. And `StringDictionary` never forgets an interned string, so a
+key set that churns through genuinely unbounded distinct symbols will grow it without limit.

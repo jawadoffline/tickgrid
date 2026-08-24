@@ -36,8 +36,9 @@ import java.util.concurrent.TimeUnit;
  * plan calls for a GIF with a live updates counter — this is that counter.
  *
  * <pre>
- *   ./build.sh blotter                 5,000 instruments
- *   ./build.sh blotter 50000 4         50,000 instruments, 4 feed threads
+ *   ./gradlew :tickgrid-demo:run                          5,000 instruments
+ *   ./gradlew :tickgrid-demo:run --args="50000 4"         50,000 across 4 feed threads
+ *   ./gradlew :tickgrid-demo:run -Protate=250             instruments retiring and relisting
  * </pre>
  */
 public final class BlotterDemo extends Application {
@@ -48,6 +49,21 @@ public final class BlotterDemo extends Application {
     private int feedThreads = 2;
     /** -Dfeed.stopAfter=ms halts the feed, to show the grid going idle when the market does. */
     private final long feedStopAfterMillis = Long.getLong("feed.stopAfter", 0);
+    /**
+     * -Dfeed.rotate=ms retires one instrument per feed thread on that interval and lists a new one
+     * in its place, which is what a session rollover or an expiry looks like. Off by default: it
+     * changes what the demo measures, and the throughput figures in BENCHMARKS.md are the static
+     * universe. Turn it on to watch slot count stay flat while thousands of instruments pass
+     * through — the HUD grows a `rotated` field when it is set.
+     */
+    private final long rotateEveryMillis = Long.getLong("feed.rotate", 0);
+    /**
+     * Slots held back for retirements in flight. A retired slot is not reusable the instant it is
+     * retired — it waits for a snapshot that excludes it — so a store sized exactly to the live
+     * universe rejects the replacement instrument for the few frames in between. Sizing the demo
+     * to the universe exactly is how that was found: 251,554 rejected submits in fifteen seconds.
+     */
+    private static final int ROTATION_HEADROOM = 64;
 
     private ColumnStore store;
     private ConflatingIngress<Quote, String> ingress;
@@ -96,10 +112,11 @@ public final class BlotterDemo extends Application {
 
     @Override
     public void start(Stage stage) {
-        store = new ColumnStore(instruments, schema(), Math.max(1024, instruments * 2));
+        final int capacity = instruments + (rotateEveryMillis > 0 ? ROTATION_HEADROOM : 0);
+        store = new ColumnStore(capacity, schema(), Math.max(1024, instruments * 2));
 
         final ColumnStore boundStore = store;
-        ingress = new ConflatingIngress<>(instruments, schema().size(),
+        ingress = new ConflatingIngress<>(capacity, schema().size(),
                 new RowExtractor<Quote, String>() {
                     @Override public String key(Quote row) {
                         return row.symbol;
@@ -162,6 +179,14 @@ public final class BlotterDemo extends Application {
             }
             feeding = false;
             System.out.println("feed stopped after " + feedStopAfterMillis + "ms");
+            if (rotateEveryMillis > 0) {
+                System.out.printf(
+                        "rotation: %,d retired, %,d reclaimed, %,d awaiting, "
+                      + "%,d keys live of %,d slots, %,d rejected%n",
+                        ingress.retiredCount(), ingress.reclaimedCount(), ingress.awaitingReclaim(),
+                        ingress.keyCount(), instruments + ROTATION_HEADROOM,
+                        ingress.rejectedCount());
+            }
         }, "feed-stopper");
         stopper.setDaemon(true);
         stopper.start();
@@ -234,7 +259,27 @@ public final class BlotterDemo extends Application {
         final Quote quote = new Quote();
         long rng = 0x9E3779B97F4A7C15L + lo;
         int i = 0;
+        // Rotation happens on the feed thread that owns the shard, which is what keeps it inside
+        // the single-writer-per-key contract: the thread that submits a key is the thread that
+        // retires it, so no serialisation of its own is needed.
+        long nextRotateNanos = rotateEveryMillis > 0
+                ? System.nanoTime() + rotateEveryMillis * 1_000_000L : Long.MAX_VALUE;
+        int generation = 0;
+        int rotateAt = 0;
+
         while (feeding) {
+            if (System.nanoTime() >= nextRotateNanos) {
+                nextRotateNanos = System.nanoTime() + rotateEveryMillis * 1_000_000L;
+                final int k = rotateAt;
+                rotateAt = (rotateAt + 1) % count;
+                if (rotateAt == 0) generation++;
+
+                ingress.retire(symbols[k]);
+                symbols[k] = symbol(lo + k) + "." + (generation + 1);
+                price[k] = 1_000 + (lo + k) * 37L % 90_000;
+                open[k] = price[k];
+                volume[k] = 0;
+            }
             for (int batch = 0; batch < 512 && feeding; batch++) {
                 rng ^= rng << 13; rng ^= rng >>> 7; rng ^= rng << 17;
                 final int k = i++ % count;
@@ -298,12 +343,16 @@ public final class BlotterDemo extends Application {
                 lastPainted = painted;
                 lastSkipped = skipped;
 
+                final String rotation = rotateEveryMillis <= 0 ? "" : String.format(Locale.ROOT,
+                        "  rotated %,d  slots %,d/%,d",
+                        ingress.reclaimedCount(), ingress.keyCount(), instruments);
+
                 hud.setText(String.format(Locale.ROOT,
                         "%,9.0f msg/s  %,9.0f applies/s  %4.1f:1  %,7d rows  "
-                      + "%3.0f fps  %3.0f idle  backlog %,d",
+                      + "%3.0f fps  %3.0f idle  backlog %,d%s",
                         msgRate, applyRate,
                         applyRate < 1 ? 1.0 : msgRate / applyRate,
-                        viewModel.snapshot().count(), fps, idle, ingress.backlog()));
+                        viewModel.snapshot().count(), fps, idle, ingress.backlog(), rotation));
             }
         }.start();
     }

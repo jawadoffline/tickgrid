@@ -1,5 +1,7 @@
 package io.github.tickgrid.view;
 
+import io.github.tickgrid.ingress.ConflatingIngress;
+import io.github.tickgrid.ingress.RowExtractor;
 import io.github.tickgrid.store.ColumnSpec;
 import io.github.tickgrid.store.ColumnStore;
 import io.github.tickgrid.store.Schema;
@@ -26,6 +28,14 @@ class ViewModelTest {
 
     private static ColumnStore store(int capacity) {
         return new ColumnStore(capacity, schema());
+    }
+
+    /** An id and a round marker — enough to tell which instrument a slot is currently holding. */
+    private static Schema twoColumns() {
+        return Schema.builder()
+                .add(ColumnSpec.longs("id"))
+                .add(ColumnSpec.longs("round"))
+                .build();
     }
 
     private static void put(ColumnStore s, int slot, String symbol, long bid, double chg, long vol) {
@@ -487,5 +497,88 @@ class ViewModelTest {
             assertTrue(vm.snapshot().generation() > first, "the recomputer stopped after one pass");
             assertEquals(49, vm.snapshot().positionOf(49), "S49 is now the dearest and should be last");
         }
+    }
+
+    // ------------------------------------------------------- slot reclamation
+
+    /**
+     * The invariant the whole reclamation scheme rests on, checked at the level that matters: a
+     * snapshot dated at or after a removal never lists the removed slot, so once such a snapshot is
+     * published the slot is provably off screen and can be reissued.
+     */
+    @Test
+    void aSnapshotDatedAfterARemovalNeverListsTheRemovedSlot() {
+        ColumnStore store = new ColumnStore(16, twoColumns());
+        ViewModel vm = new ViewModel(store);
+        vm.setSortPolicy(SortPolicy.manual());
+
+        for (int slot = 0; slot < 4; slot++) store.apply(slot, new long[]{slot, 100 + slot}, 2);
+        vm.recomputeNow();
+
+        ViewSnapshot before = vm.snapshot();
+        assertTrue(before.contains(2));
+        final int epochBefore = before.storeEpoch();
+
+        store.remove(2);
+        vm.recomputeNow();
+
+        ViewSnapshot after = vm.snapshot();
+        assertTrue(after.storeEpoch() > epochBefore, "a removal must move the epoch on");
+        assertFalse(after.contains(2), "the new snapshot must not list the removed slot");
+        assertTrue(before.contains(2), "and the old one must be unchanged, still listing it");
+    }
+
+    /**
+     * The frame loop, without a frame loop: submit, drain, recompute, reclaim, repeat, with the
+     * universe turning over completely each round. What is being checked is that no snapshot ever
+     * lists a slot that was reissued while that snapshot was the published one — the failure this
+     * would show up as on screen is one instrument's prices drawn on another's line.
+     */
+    @Test
+    void reclaimedSlotsAreNeverReissuedUnderAPublishedSnapshot() {
+        final int capacity = 8;
+        ColumnStore store = new ColumnStore(capacity, twoColumns());
+        ViewModel vm = new ViewModel(store);
+        vm.setSortPolicy(SortPolicy.manual());
+
+        ConflatingIngress<long[], String> in = new ConflatingIngress<>(
+                capacity, 2, new RowExtractor<long[], String>() {
+                    @Override public String key(long[] row) {
+                        return "K" + row[0];
+                    }
+                    @Override public void extract(long[] row, long[] staging, int base) {
+                        staging[base] = row[0];
+                        staging[base + 1] = row[1];
+                    }
+                });
+
+        long id = 0;
+        for (int round = 0; round < 50; round++) {
+            final long[] issued = new long[capacity];
+            for (int i = 0; i < capacity; i++) {
+                issued[i] = id++;
+                assertTrue(in.submit(new long[]{issued[i], round}), "rejected in round " + round);
+            }
+            in.drainAll(store.applier());
+            vm.recomputeNow();
+
+            // Whatever the published snapshot lists must be live and must be the instrument it was
+            // when the snapshot was built.
+            ViewSnapshot view = vm.snapshot();
+            assertEquals(capacity, view.count());
+            for (int pos = 0; pos < view.count(); pos++) {
+                final int slot = view.slotAt(pos);
+                assertTrue(store.isLive(slot));
+                assertEquals(round, store.get(slot, 1), "slot " + slot + " holds a stale round");
+            }
+
+            for (int i = 0; i < capacity; i++) in.retire("K" + issued[i]);
+            in.drainAll(store.applier());
+            vm.recomputeNow();
+            in.reclaim(vm.snapshot().storeEpoch());
+        }
+
+        assertEquals(0, in.rejectedCount());
+        assertEquals(400, in.reclaimedCount());
     }
 }

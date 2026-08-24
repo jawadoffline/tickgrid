@@ -231,18 +231,36 @@ class ColumnStoreTest {
     }
 
     @Test
-    void aRemovedSlotIsNeverHandedOutAgain() {
-        // Slot assignment belongs to the KeyIndex, which has no removal path at all -- that is the
-        // guarantee. This pins the store half: a tombstoned slot keeps its data and stays dead
-        // until something explicitly writes it again.
+    void removingWipesTheSlotSoTheNextTenantStartsClean() {
+        // Slot reuse is decided by the ingress, not here; the store's half of the contract is that
+        // a tombstoned slot leaves nothing behind for whoever moves in.
         ColumnStore store = new ColumnStore(100, blotterSchema());
         row(store, 4, 0, 555, 0, 0, 0, 0);
         store.remove(4);
-        assertEquals(555, store.get(4, 1), "tombstoning must not scrub the row");
+
         assertFalse(store.isLive(4));
+        assertEquals(0, store.get(4, 1), "a removed row must not leave its prices behind");
 
         int[] dst = new int[100];
         assertEquals(0, store.liveSlots(dst), "a dead slot must not appear in a view");
+    }
+
+    @Test
+    void aReissuedSlotDoesNotInheritTheFlashOfThePreviousTenant() {
+        // The wipe has to take the flash stamps with it. Without that, the first row to land on a
+        // recycled slot lights up in the previous instrument's colours.
+        ColumnStore store = new ColumnStore(100, blotterSchema());
+        row(store, 4, 0, 100, 0, 0, 0, 0);
+        row(store, 4, 0, 200, 0, 0, 0, 0);              // a real move: stamps the bid
+        assertTrue(store.flashAgeMillis(4, 1) >= 0, "the move should have stamped");
+
+        store.remove(4);
+        row(store, 4, 0, 900, 0, 0, 0, 0);              // a different instrument, same slot
+
+        assertTrue(store.isLive(4));
+        assertEquals(900, store.get(4, 1));
+        assertEquals(-1, store.flashAgeMillis(4, 1), "a first appearance must not flash");
+        assertEquals(0, store.flashDirection(4, 1));
     }
 
     // ---------------------------------------------------------------- schema

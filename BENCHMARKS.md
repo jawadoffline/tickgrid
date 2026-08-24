@@ -186,6 +186,41 @@ a reference that already exists. Measured, it allocates nothing. The map earns i
 throughput and on dense slots, no rehash and an exact capacity bound. It never earned it on
 allocation.
 
+### Did making removal possible cost anything?
+
+Retirement changed the shape of the index: insertion moved under a lock, and lookups gained a
+tombstone check per probe. The lock is only on insertion, and these benchmarks measure lookups of
+keys inserted during setup, so it should never fire during measurement. Worth checking rather than
+asserting.
+
+`CasKeyIndex` in the benchmark source is the class as it stood before retirement existed. Four
+separate runs, 3 forks each, machine otherwise idle:
+
+| keys | | run 1 | run 2 | run 3 | run 4 |
+|---|---|---|---|---|---|
+| 1,000 | before | 24.2M ± 8.6M | 50.2M ± 7.4M | 51.6M ± 0.9M | 50.2M ± 7.6M |
+| 1,000 | after | 52.1M ± 6.8M | 55.8M ± 1.6M | 54.2M ± 4.8M | 50.6M ± 13.2M |
+| 100,000 | before | 14.2M ± 2.9M | 14.7M ± 5.4M | 12.0M ± 1.0M | 17.6M ± 2.3M |
+| 100,000 | after | 12.4M ± 2.3M | 13.2M ± 2.2M | 13.6M ± 4.8M | 11.5M ± 0.6M |
+
+**No measurable difference, and the noise is the finding.** At a thousand keys the after/before
+ratio per run is 2.15x, 1.11x, 1.05x, 1.01x — run 1's *before* number is an outlier at half the
+throughput of the same code in the other three runs. At a hundred thousand the ratio is 0.87x,
+0.90x, 1.13x, 0.65x: **the sign flips**, and unchanged code spans 12.0M to 17.6M across runs. A ten
+percent effect cannot be resolved against a 1.5x spread.
+
+Two intermediate readings were discarded getting here, both worth naming. A first pass measured a
+2.3x *regression* and a second a 2.7x *improvement* — both were taken while a Gradle build and a
+javadoc task were running on the same machine. Contaminated runs do not average out; they have to
+be thrown away.
+
+The second is subtler and revises the rule the section above lays down. "Race the variants inside
+one run" is necessary but **not sufficient**: JMH forks each `@Benchmark` into its own JVM, so a
+single run shares only the machine and the few minutes, not the JIT state or the heap layout. That
+is enough to make one implementation's numbers move 2x between runs while its rival's stay put. The
+usable rule is stronger — race the variants inside one run, run it several times, and believe an
+effect only when it survives all of them with a consistent sign.
+
 ## Formatting and parsing
 
 | operation | time | allocation |
