@@ -223,10 +223,25 @@ public final class SocialCard extends Application {
         out.getAbsoluteFile().getParentFile().mkdirs();
         try {
             javafx.scene.image.WritableImage image = scene.snapshot(null);
-            javax.imageio.ImageIO.write(
-                    javafx.embed.swing.SwingFXUtils.fromFXImage(image, null), "png", out);
-            System.out.printf("social card: %s  (%dx%d)%n", out.getAbsolutePath(),
-                    (int) image.getWidth(), (int) image.getHeight());
+            java.awt.image.BufferedImage rgba =
+                    javafx.embed.swing.SwingFXUtils.fromFXImage(image, null);
+
+            // Written without an alpha channel on purpose. The card is fully opaque anyway, so the
+            // alpha band carries nothing, and GitHub's social-preview upload would not serve an
+            // RGBA PNG of this card: it accepted the file at the form and then reverted the
+            // setting to its auto-generated image. TYPE_INT_RGB composites against the card's own
+            // backdrop and emits a three-channel PNG.
+            java.awt.image.BufferedImage rgb = new java.awt.image.BufferedImage(
+                    rgba.getWidth(), rgba.getHeight(), java.awt.image.BufferedImage.TYPE_INT_RGB);
+            java.awt.Graphics2D g = rgb.createGraphics();
+            g.setColor(new java.awt.Color(0x0e, 0x14, 0x18));
+            g.fillRect(0, 0, rgb.getWidth(), rgb.getHeight());
+            g.drawImage(rgba, 0, 0, null);
+            g.dispose();
+
+            javax.imageio.ImageIO.write(rgb, "png", out);
+            System.out.printf("social card: %s  (%dx%d, no alpha)%n", out.getAbsolutePath(),
+                    rgb.getWidth(), rgb.getHeight());
         } catch (Exception e) {
             System.err.println("card render failed: " + e);
         }
